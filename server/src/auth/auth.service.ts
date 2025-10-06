@@ -1,26 +1,38 @@
+import { InjectModel } from '@nestjs/mongoose';
+import { UsersService } from 'src/users/users.service';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/login-user.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { JwtService } from '@nestjs/jwt';
+import { User, UserDocument } from 'src/users/schemas/user.schema';
+import { Model } from 'mongoose';
+import { LoginDto } from './dto/login-user.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+    private usersService: UsersService,
+    private jwtService: JwtService,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+  ) {}
+
+  async validateUser(loginUser: LoginDto): Promise<UserDocument | null> {
+    const user = await this.usersService.findByEmail(loginUser.email);
+    if (user && await bcrypt.compare(loginUser.password, user.password)) {
+      return user;
+    }
+    return null;
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async login(user: UserDocument): Promise<{ access_token: string }> {
+    const payload = { sub: user._id, email: user.email, roles: user.roles };
+    return {
+      access_token: this.jwtService.sign(payload),
+    };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  async register(createUser: CreateUserDto): Promise<User> {
+    const userDoc = await this.usersService.create(createUser);
+    return userDoc.toObject();
   }
 }
