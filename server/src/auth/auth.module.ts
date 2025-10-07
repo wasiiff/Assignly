@@ -13,8 +13,8 @@ import { JwtStrategy } from './jwt.strategy';
     UsersModule,
     PassportModule,
     JwtModule.register({
-      secret: 'SECRET_KEY',
-      signOptions: { expiresIn: '1d' },
+      secret: process.env.JWT_SECRET!,
+      signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '3600s' },
     }),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
